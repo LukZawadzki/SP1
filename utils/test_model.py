@@ -3,10 +3,11 @@ import cv2
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+from config import *
 
 
 def preprocess(image: cv2.Mat):
-    resized = np.resize(image, (224, 224, 3))
+    resized = np.resize(image, (120, 160, 3))/255
     return tf.keras.applications.resnet_v2.preprocess_input(resized)
 
 
@@ -22,7 +23,7 @@ def test_model(model_path, image_path, comparison_path):
         output = cv2.GaussianBlur(output, (7, 7), 6)
 
         real_im = cv2.imread(comparison_path, cv2.IMREAD_GRAYSCALE)
-        real_im = cv2.resize(real_im, (224, 224), interpolation=cv2.INTER_LINEAR)
+        real_im = cv2.resize(real_im, IMAGE_SIZE, interpolation=cv2.INTER_LINEAR)
 
         fig, ax = plt.subplots(1, 3)
         ax[0].axis("off")

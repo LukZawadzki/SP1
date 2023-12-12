@@ -1,31 +1,45 @@
-import keras.activations
 import keras.layers as layers
 from keras.applications.vgg16 import VGG16
 import tensorflow as tf
-from utils.gaussian import Gaussian_kernel
-import numpy as np
 
 
 def create_aspp():
 
-    backbone = VGG16(False, 'imagenet', None, pooling=None)
+    backbone = VGG16(False, 'imagenet', input_shape=(224, 224, 3), pooling=None)
 
     pooling_1 = backbone.get_layer("block3_pool")
     pooling_2 = backbone.get_layer("block4_pool")
     pooling_3 = backbone.get_layer("block5_pool")
 
-    pooling_2.padding = "same"
-    pooling_2.strides = (1, 1)
+    new_backbone = [layers.InputLayer((120, 160, 3))]
+    pooling_layers = []
 
-    pooling_3.padding = "same"
-    pooling_3.strides = (1, 1)
+    for i in range(1, len(backbone.layers)):
+        previous_layer = new_backbone[i-1]
+        if isinstance(previous_layer, layers.InputLayer):
+            output = previous_layer.output
+        else:
+            output = previous_layer
+        if "pool" in backbone.get_layer(index=i).name:
+            if i >= 13:
+                new_layer = layers.MaxPooling2D(pool_size=2, strides=1, padding="same")(output)
+            else:
+                new_layer = layers.MaxPooling2D()(output)
+            pooling_layers.append(new_layer)
+        else:
+            old_layer = backbone.get_layer(index=i)
+            new_layer = layers.Conv2D(old_layer.filters, old_layer.kernel_size, old_layer.strides,
+                                      old_layer.padding, dilation_rate=old_layer.dilation_rate)(output)
+            new_layer.weights = old_layer.get_weights()
+
+        new_backbone.append(new_layer)
 
     for layer in backbone.layers:
         if layer.name in ['block5_conv1', 'block5_conv2', 'block5_conv3']:
             layer.dilation_rate = (2, 2)
         layer.trainable = False
 
-    concat = tf.concat([pooling_1.output, pooling_2.output, pooling_3.output], axis=-1)
+    concat = tf.concat([pooling_layers[2], pooling_layers[3], pooling_layers[4]], axis=-1)
 
     aspp_conv_1 = layers.Conv2D(256, 1,
                                    padding="same",
@@ -59,28 +73,6 @@ def create_aspp():
                                    padding="same",
                                    activation="relu",
                                    name="aspp_output")(aspp_concat)
-
-    # aspp_pooling = layers.MaxPooling2D(2,1, padding="same")(concat)
-    # aspp_dilation_1 = layers.Conv2D(256, 3,
-    #                                    padding="same",
-    #                                    activation="relu",
-    #                                    dilation_rate=4,
-    #                                    name="aspp_dilation_1")(aspp_pooling)
-    # aspp_dilation_2 = layers.Conv2D(256, 3,
-    #                                    padding="same",
-    #                                    activation="relu",
-    #                                    dilation_rate=8,
-    #                                    name="aspp_dilation_2")(aspp_dilation_1)
-    # aspp_dilation_3 = layers.Conv2D(256, 3,
-    #                                    padding="same",
-    #                                    activation="relu",
-    #                                    dilation_rate=12,
-    #                                    name="aspp_dilation_3")(aspp_dilation_2)
-    #
-    # aspp_conv_1 = layers.Conv2D(256, 1,
-    #                                padding="valid",
-    #                                activation="relu",
-    #                                name="aspp_conv_1")(aspp_dilation_3)
 
     decoder_upsampling_1 = layers.UpSampling2D(name="decoder_upsampling_1")(aspp_output)
 
@@ -127,10 +119,6 @@ def create_aspp():
     decoder_conv_7 = layers.Conv2D(1, 3,
                                       padding="same",
                                       name="decoder_conv_7")(decoder_conv_3)
-    # normalization = layers.BatchNormalization()(decoder_conv_7)
-    # activation = layers.Activation(keras.activations.hard_sigmoid, name='block10_out')(normalization)
-
-    decoder_output = layers.Resizing(224, 224, name="decoder_output")(decoder_conv_7)
 
     # gaussian_kernel = tf.convert_to_tensor(Gaussian_kernel(l=10, sig=5))
     # gaussian_kernel = tf.expand_dims(gaussian_kernel, axis=-1)
@@ -160,8 +148,18 @@ def create_aspp():
 
     sgd = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.9, nesterov=True)
     adam = tf.keras.optimizers.Adam(learning_rate=1e-5)
-    model = tf.keras.Model(inputs=backbone.input, outputs=decoder_output)
-    model.compile(optimizer=adam,
-                  loss="mse",
-                  metrics=[tf.keras.metrics.KLD, "AUC", "accuracy"])
-    return model
+    # model = tf.keras.Model(inputs=backbone.input, outputs=decoder_output)
+    # model.compile(optimizer=adam,
+    #               loss="mse",
+    #               metrics=[tf.keras.metrics.KLD, "AUC", "accuracy"])
+    # print(model.summary())
+
+    test_model = tf.keras.Model(inputs=new_backbone[0].input, outputs=decoder_conv_7)
+    for layer in test_model.layers:
+        if '2d' in layer.name:
+            layer.trainable = False
+    test_model.compile(optimizer=adam,
+                       loss="mse",
+                       metrics=[tf.keras.metrics.KLD, "AUC", "accuracy", "mse"])
+    # print(test_model.summary())
+    return test_model
