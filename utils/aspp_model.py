@@ -29,15 +29,15 @@ def create_aspp():
         else:
             old_layer = backbone.get_layer(index=i)
             new_layer = layers.Conv2D(old_layer.filters, old_layer.kernel_size, old_layer.strides,
-                                      old_layer.padding, dilation_rate=old_layer.dilation_rate)(output)
-            new_layer.weights = old_layer.get_weights()
+                                      old_layer.padding, dilation_rate=old_layer.dilation_rate,
+                                      weights=old_layer.get_weights())(output)
 
         new_backbone.append(new_layer)
 
-    for layer in backbone.layers:
-        if layer.name in ['block5_conv1', 'block5_conv2', 'block5_conv3']:
-            layer.dilation_rate = (2, 2)
-        layer.trainable = False
+    # for layer in backbone.layers:
+    #     if layer.name in ['block5_conv1', 'block5_conv2', 'block5_conv3']:
+    #         layer.dilation_rate = (2, 2)
+    #     layer.trainable = False
 
     concat = tf.concat([pooling_layers[2], pooling_layers[3], pooling_layers[4]], axis=-1)
 
