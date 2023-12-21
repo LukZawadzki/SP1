@@ -1,0 +1,8 @@
+tensorflow
+numpy
+gdown
+matplotlib
+scipy
+h5py
+keras
+requests
