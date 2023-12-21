@@ -47,7 +47,6 @@ def compare_models(
             output_image = model_output[0, :, :, :]
 
             axs[i, model_index + 2].axis('off')
-            axs[i, model_index + 2].set_title('test')
             axs[i, model_index + 2].imshow(cv2.resize(output_image, (224, 224)), 'gray')
 
     plt.show()
