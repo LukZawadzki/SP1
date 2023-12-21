@@ -1,23 +1,7 @@
-"""
-Created on Tue Oct 12 16:38:06 2021
-
-@author: pohsuanh
-
-Custom loss function
-
-We used to train the model indirectly with MSE, KLD, BCE to predict
-saliency maps.
-However, these metrics is not the final metric that we use to evaluate the goodness
-of fit. We use Shuffle_AUC, Judd_AUC, and Borji_AUC to evaluate the sliency prediction
-because the predicting fixation map is a binary classification problem.
-Therefore, predicting 'ground truth' slaiency maps may introduce artifacts.
-(What are the other obvious reasons using AUC loss aside from more direct training ?
-L2 loss is obvious FAST. Maybe pretrain with L2 loss, and fine tune with AUC loss?
- )
-"""
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+from keras import backend
 
 class Borji_auc_loss(tf.keras.losses.Loss):
 
