@@ -5,7 +5,7 @@ import tensorflow as tf
 from config import IMAGE_SIZE
 
 
-def create_autoencoder():
+def create_encoder_decoder():
     backbone = keras.applications.VGG19(False, 'imagenet', input_shape=(IMAGE_SIZE[0], IMAGE_SIZE[1], 3))
 
     for layer in backbone.layers:
