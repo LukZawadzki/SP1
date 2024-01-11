@@ -1,12 +1,11 @@
-import keras.initializers.initializers_v2
 import keras.layers as layers
-from keras.applications.vgg16 import VGG16
 import tensorflow as tf
-from config import IMAGE_SIZE
+
+from config import INPUT_IMAGE_SIZE
 
 
 def create_encoder_decoder():
-    backbone = keras.applications.VGG19(False, 'imagenet', input_shape=(IMAGE_SIZE[0], IMAGE_SIZE[1], 3))
+    backbone = tf.keras.applications.VGG19(False, 'imagenet', input_shape=(*INPUT_IMAGE_SIZE, 3))
 
     for layer in backbone.layers:
         layer.trainable = False
@@ -35,9 +34,9 @@ def create_encoder_decoder():
     decoder_conv_5_3 = layers.Conv2D(1, 3, padding='same', activation='relu')(decoder_conv_5_2)
 
     # sgd = tf.keras.optimizers.SGD(learning_rate=1e-5, momentum=0.9, nesterov=True)
-    sgd = tf.keras.optimizers.SGD(learning_rate=0.001, momentum=0.9, nesterov=True)
     adam = tf.keras.optimizers.Adam(learning_rate=1e-5)
     model = tf.keras.Model(inputs=backbone.input, outputs=decoder_conv_5_3)
+
     model.compile(optimizer=adam, loss="mse", metrics=[tf.keras.metrics.KLD, "AUC", "accuracy"])
-    model.summary()
+    # model.summary()
     return model

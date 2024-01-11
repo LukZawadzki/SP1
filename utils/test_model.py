@@ -1,38 +1,52 @@
 import os.path
+
 import cv2
-import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-from config import *
-from utils.models.aspp_model import SaliencyNormalizationLayer, kld
+import tensorflow as tf
+from utils.preprocess import preprocess
+
+from config import INPUT_IMAGE_SIZE, CUSTOM_OBJECTS
 
 
-def preprocess(image: cv2.Mat):
-    resized = cv2.resize(image, (IMAGE_SIZE[1], IMAGE_SIZE[0]), interpolation=cv2.INTER_AREA)
-    return tf.keras.applications.vgg16.preprocess_input(resized)
+def test_model(model_path: str, image_path: str, ground_truth_path: str | None = None):
+    """
+    :param model_path: path to trained model
+    :param image_path: path to test image
+    :param ground_truth_path: path to the ground truth image, if applicable
+    """
 
+    if not os.path.exists(model_path):
+        print('Model path doesn\'t exist')
+        return
 
-def test_model(model_path, image_path, comparison_path):
+    model: tf.keras.Model = tf.keras.models.load_model(model_path, custom_objects=CUSTOM_OBJECTS)
 
-    if os.path.exists(model_path):
-        model: tf.keras.Model = tf.keras.models.load_model(
-            model_path, custom_objects={"kl_divergence": tf.keras.losses.kld,
-                                        "kld": kld,
-                                        "SaliencyNormalizationLayer": SaliencyNormalizationLayer})
+    test_im = cv2.imread(image_path)
+    input_im = preprocess(INPUT_IMAGE_SIZE)(test_im)
+    output = model.predict(np.array([input_im]))
+    output = output[0, :, :, :]
 
-        test_im = cv2.imread(image_path)
-        input_im = preprocess(test_im)
-        output = model.predict(np.array([input_im]))
-        output = output[0, :, :, :]
+    ground_truth = None
+    if ground_truth_path is not None:
+        ground_truth = cv2.imread(ground_truth_path, cv2.IMREAD_GRAYSCALE)
+        ground_truth = cv2.resize(ground_truth, INPUT_IMAGE_SIZE, interpolation=cv2.INTER_LINEAR)
 
-        real_im = cv2.imread(comparison_path, cv2.IMREAD_GRAYSCALE)
-        real_im = cv2.resize(real_im, IMAGE_SIZE, interpolation=cv2.INTER_LINEAR)
+    test_image_to_show = cv2.cvtColor(
+        cv2.resize(test_im, INPUT_IMAGE_SIZE, interpolation=cv2.INTER_LINEAR),
+        cv2.COLOR_BGR2RGB
+    )
 
-        fig, ax = plt.subplots(1, 3)
-        ax[0].axis("off")
-        ax[0].imshow(test_im)
+    fig, ax = plt.subplots(1, 3 if ground_truth_path is not None else 2)
+    ax[0].axis("off")
+    ax[0].imshow(test_image_to_show)
+    if ground_truth_path is not None:
+        ax[1].imshow(ground_truth, 'gray')
+        ax[1].axis("off")
+        ax[2].imshow(output, 'gray')
+        ax[2].axis("off")
+    else:
         ax[1].imshow(output, 'gray')
         ax[1].axis("off")
-        ax[2].imshow(real_im, 'gray')
-        ax[2].axis("off")
-        plt.show()
+
+    plt.show()

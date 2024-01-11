@@ -55,6 +55,5 @@ def create_unet():
         loss=tf.keras.losses.mse,
         metrics=[tf.keras.metrics.KLD, 'AUC', 'accuracy']
     )
-    model.summary()
-
+    # model.summary()
     return model

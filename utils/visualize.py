@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 
-from utils.models.aspp_model import SaliencyNormalizationLayer, kld
+from config import INPUT_IMAGE_SIZE, CUSTOM_OBJECTS
 
 
 def compare_models(
@@ -16,16 +16,10 @@ def compare_models(
     """Compares the models on the given images."""
 
     fig, axs = plt.subplots(len(images), len(model_paths) + 2)
-    fig.set_size_inches(5 * len(model_paths) + 2, 3 * len(images))
-
-    custom_objects = {
-        'kl_divergence': tf.keras.losses.kld,
-        'kld': kld,
-        'SaliencyNormalizationLayer': SaliencyNormalizationLayer
-    }
+    # fig.set_size_inches(5 * len(model_paths) + 2, 3 * len(images))
 
     models: list[tf.keras.Model] = [
-        tf.keras.models.load_model(model_path, custom_objects=custom_objects)
+        tf.keras.models.load_model(model_path, custom_objects=CUSTOM_OBJECTS)
         for model_path in model_paths
     ]
 
@@ -34,10 +28,10 @@ def compare_models(
         ground_truth = cv2.imread(map_path, cv2.IMREAD_GRAYSCALE)
 
         axs[i, 0].axis('off')
-        axs[i, 0].imshow(cv2.resize(image, (224, 224)))
+        axs[i, 0].imshow(cv2.resize(image, INPUT_IMAGE_SIZE))
 
         axs[i, 1].axis('off')
-        axs[i, 1].imshow(cv2.resize(ground_truth, (224, 224)), 'gray')
+        axs[i, 1].imshow(cv2.resize(ground_truth, INPUT_IMAGE_SIZE), 'gray')
 
         for model_index, model in enumerate(models):
             model_input = preprocess_funcs[model_index](image)
@@ -47,6 +41,6 @@ def compare_models(
             output_image = model_output[0, :, :, :]
 
             axs[i, model_index + 2].axis('off')
-            axs[i, model_index + 2].imshow(cv2.resize(output_image, (224, 224)), 'gray')
+            axs[i, model_index + 2].imshow(cv2.resize(output_image, INPUT_IMAGE_SIZE), 'gray')
 
     plt.show()

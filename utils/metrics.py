@@ -17,28 +17,6 @@ def correlation_coefficient(y_true, y_pred):
     return cc
 
 
-def information_gain(y_true, y_pred):
-    y_true = tf.cast(y_true, dtype=tf.float32)
-    y_pred = tf.cast(y_pred, dtype=tf.float32)
-    center_bias = tf.math.exp(
-        -((tf.range(0, tf.shape(y_pred)[0]) - tf.shape(y_pred)[0] / 2) ** 2) / (2 * (tf.shape(y_pred)[0] / 6) ** 2))
-    center_bias = center_bias / tf.reduce_sum(center_bias)
-
-    y_pred_flat = tf.keras.backend.flatten(y_pred)
-    center_bias_flat = tf.keras.backend.flatten(center_bias)
-
-    y_pred_flat = tf.clip_by_value(y_pred_flat, tf.keras.backend.epsilon(), 1.0)
-    center_bias_flat = tf.clip_by_value(center_bias_flat, tf.keras.backend.epsilon(), 1.0)
-
-    log_likelihood_pred = tf.reduce_sum(tf.math.log(y_pred_flat))
-    log_likelihood_center_bias = tf.reduce_sum(tf.math.log(center_bias_flat))
-
-    ig = (log_likelihood_pred - log_likelihood_center_bias) / (
-            tf.keras.backend.cast(tf.shape(y_pred_flat)[0], dtype=tf.float32) * tf.keras.backend.log(2.0))
-
-    return ig
-
-
 def similarity_metric(y_true, y_pred):
     y_true_density = y_true / tf.reduce_sum(y_true)
     y_pred_density = y_pred / tf.reduce_sum(y_pred)
